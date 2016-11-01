@@ -23,5 +23,4 @@
 #define OFF			0
 #endif
 
-
 #endif /* COMMON_H_ */

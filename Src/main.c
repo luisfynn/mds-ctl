@@ -39,8 +39,8 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-#include <inttypes.h>
 #include "common.h"
+#include "shell.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -53,11 +53,11 @@ UART_HandleTypeDef huart1;
 osThreadId defaultTaskHandle;
 osMessageQId uartRxQueueHandle;
 osSemaphoreId myBinarySem01Handle;
+osSemaphoreId myBinarySem02Handle;
+osSemaphoreId myBinarySem03Handle;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-uint8_t consoleMessage[7] ="\r\nroot>";
-uint8_t usartSendCharater = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -70,8 +70,6 @@ static void MX_USART1_UART_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
-
 void alarmOutTask(void const * argument);
 void stm32LiveTask(void const * argument);
 void stm32Usart1Task(void const * argument);
@@ -79,6 +77,8 @@ void stm32Usart1Task(void const * argument);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
+
+/* USER CODE END 0 */
 
 int main(void)
 {
@@ -100,6 +100,7 @@ int main(void)
   MX_ADC1_Init();
   MX_IWDG_Init();
   MX_USART1_UART_Init();
+
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
@@ -112,6 +113,14 @@ int main(void)
   /* definition and creation of myBinarySem01 */
   osSemaphoreDef(myBinarySem01);
   myBinarySem01Handle = osSemaphoreCreate(osSemaphore(myBinarySem01), 1);
+
+  /* definition and creation of myBinarySem02 */
+  osSemaphoreDef(myBinarySem02);
+  myBinarySem02Handle = osSemaphoreCreate(osSemaphore(myBinarySem02), 1);
+
+  /* definition and creation of myBinarySem03 */
+  osSemaphoreDef(myBinarySem03);
+  myBinarySem03Handle = osSemaphoreCreate(osSemaphore(myBinarySem03), 1);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
@@ -126,25 +135,26 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
+
   osThreadDef(stm32LiveCheck, stm32LiveTask, osPriorityNormal, 0, 64);
   defaultTaskHandle = osThreadCreate(osThread(stm32LiveCheck), NULL);
 
   osThreadDef(alarmOut, alarmOutTask, osPriorityNormal, 0, 64);
   defaultTaskHandle = osThreadCreate(osThread(alarmOut), NULL);
 
-  osThreadDef(stm32Usart1, stm32Usart1Task, osPriorityNormal, 0, 64);
+  osThreadDef(stm32Usart1, stm32Usart1Task, osPriorityNormal, 0, 128);
   defaultTaskHandle = osThreadCreate(osThread(stm32Usart1), NULL);
   /* USER CODE END RTOS_THREADS */
 
   /* Create the queue(s) */
   /* definition and creation of uartRxQueue */
-  osMessageQDef(uartRxQueue, USART_MAX_BUFF_SIZE, uint32_t);
+  osMessageQDef(uartRxQueue, 128, uint32_t);
   uartRxQueueHandle = osMessageCreate(osMessageQ(uartRxQueue), NULL);
-
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
  
+
   /* Start scheduler */
   osKernelStart();
   
@@ -157,7 +167,6 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-
   }
   /* USER CODE END 3 */
 
@@ -272,7 +281,6 @@ static void MX_USART1_UART_Init(void)
   {
     Error_Handler();
   }
-
 }
 
 /** Configure pins as 
@@ -317,44 +325,10 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6, GPIO_PIN_RESET);
+
 }
 
 /* USER CODE BEGIN 4 */
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-  if(huart->Instance == USART1)
-  {
-	  osEvent evt = osMessageGet(uartRxQueueHandle, 0);
-
-	  if(evt.status == osEventMessage)
-	  {
-		  if(evt.value.v == ENTER)
-		  {
-			  HAL_UART_Transmit_IT(&huart1, consoleMessage, sizeof(consoleMessage));
-			  usartSendCharater = 0;
-		  }
-		  else if(evt.value.v == BACKSPACE || evt.value.v == DELETE)
-		  {
-			  if(usartSendCharater > 0)
-			  {
-				  printf("\b \b");
-				  usartSendCharater--;
-			  }
-			  else
-			  {
-				  usartSendCharater =0;
-			  }
-		  }
-		  else
-		  {
-			  HAL_UART_Transmit_IT(&huart1, &evt.value.v, USART_TX_BUFF_SIZE);
-			  usartSendCharater++;
-		  }
-	  }
-	  HAL_UART_Receive_IT(&huart1,uartRxQueueHandle, USART_RX_BUFF_SIZE);
-  }
-}
-
 /* stm32LiveTask function */
 void stm32LiveTask(void const * argument)
 {
@@ -383,28 +357,19 @@ void alarmOutTask(void const * argument)
 
 void stm32Usart1Task(void const * argument)
 {
-	printf(" \n");
-
+	sInBuf = ShellInitRecvBuf();
 	if(uartRxQueueHandle != NULL) HAL_UART_Receive_IT(&huart1,uartRxQueueHandle,USART_RX_BUFF_SIZE);
 
 	for(;;)
 	{
-		osDelay(1);
+		stm32ShellCommand();
+		osDelay(10);
 	}
 }
+
 /* USER CODE END 4 */
 
 /* StartDefaultTask function */
-void StartDefaultTask(void const * argument)
-{
-  /* USER CODE BEGIN 5 */
-  /* Infinite loop */
-  for(;;)
-  {
-	  osDelay(1);
-  }
-  /* USER CODE END 5 */ 
-}
 
 /**
   * @brief  This function is executed in case of error occurrence.

@@ -26,7 +26,7 @@
  *  
  *----------------------------------------------------------------------------
  *
- * Portions Copyright ï¿½ 2016 STMicroelectronics International N.V. All rights reserved.
+ * Portions Copyright © 2016 STMicroelectronics International N.V. All rights reserved.
  * Portions Copyright (c) 2013 ARM LIMITED
  * All rights reserved.
  * Redistribution and use in source and binary forms, with or without
@@ -1026,6 +1026,7 @@ osEvent osMessageGet (osMessageQId queue_id, uint32_t millisec)
       event.status = (ticks == 0) ? osOK : osEventTimeout;
     }
   }
+  
   return event;
 }
 

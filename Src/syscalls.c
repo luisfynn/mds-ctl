@@ -33,14 +33,13 @@ SOFTWARE.
 #include <errno.h>
 #include <stdio.h>
 #include <signal.h>
+#include <string.h>
 #include <time.h>
 #include <sys/time.h>
 #include <sys/times.h>
-
 #include "stm32f1xx_hal.h"
 
 extern UART_HandleTypeDef huart1;
-extern uint8_t consoleMessage[7];
 
 /* Variables */
 #undef errno
@@ -48,7 +47,6 @@ extern int errno;
 
 uint8_t *__env[1] = { 0 };
 uint8_t **environ = __env;
-
 
 /* Functions */
 void initialise_monitor_handles()
@@ -74,23 +72,22 @@ void _exit (int32_t status)
 
 int _write(int32_t file, uint8_t *ptr, int32_t len)
 {
-  /* Implement your write code here, this is used by puts and printf for example */
-	for(unsigned int i = 0; i < len; i++)
-	{
-		if(*ptr == '\n')
+	/* Implement your write code here, this is used by puts and printf for example */
+		for(unsigned int i = 0; i < len; i++)
 		{
-			uint8_t tempSize = sizeof(consoleMessage);
-			HAL_UART_Transmit(&huart1, consoleMessage, tempSize, 10);
-
-			ptr++;
+			if(*ptr == '\n')
+			{
+				uint8_t temp[2] = "\r\n";
+				HAL_UART_Transmit(&huart1, temp, 2, 10);
+				ptr++;
+			}
+			else
+			{
+				HAL_UART_Transmit(&huart1, ptr, 1, 10);
+				ptr++;
+			}
 		}
-		else
-		{
-			HAL_UART_Transmit(&huart1, ptr, 1, 10);
-			ptr++;
-		}
-	}
-	return len;
+		return len;
 }
 
 caddr_t _sbrk(int32_t incr)

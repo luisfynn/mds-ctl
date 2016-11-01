@@ -1586,6 +1586,7 @@ Queue_t * const pxQueue = ( Queue_t * ) xQueue;
 			//prvCopyDataFromQueue( pxQueue, pvBuffer );	//Delete luisfynn_161012
 
 			--( pxQueue->uxMessagesWaiting );
+
 			/* If the queue is locked the event list will not be modified.
 			Instead update the lock count so the task that unlocks the queue
 			will know that an ISR has removed data while the queue was
