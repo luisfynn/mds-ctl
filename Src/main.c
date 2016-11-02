@@ -33,28 +33,16 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f1xx_hal.h"
 #include "cmsis_os.h"
+#include "adc.h"
+#include "i2c.h"
+#include "iwdg.h"
+#include "usart.h"
+#include "gpio.h"
 
 /* USER CODE BEGIN Includes */
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <string.h>
-#include "common.h"
-#include "shell.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
-ADC_HandleTypeDef hadc1;
-
-IWDG_HandleTypeDef hiwdg;
-
-UART_HandleTypeDef huart1;
-
-osThreadId defaultTaskHandle;
-osMessageQId uartRxQueueHandle;
-osSemaphoreId myBinarySem01Handle;
-osSemaphoreId myBinarySem02Handle;
-osSemaphoreId myBinarySem03Handle;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
@@ -63,17 +51,10 @@ osSemaphoreId myBinarySem03Handle;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 void Error_Handler(void);
-static void MX_GPIO_Init(void);
-static void MX_ADC1_Init(void);
-static void MX_IWDG_Init(void);
-static void MX_USART1_UART_Init(void);
+void MX_FREERTOS_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
-void alarmOutTask(void const * argument);
-void stm32LiveTask(void const * argument);
-void stm32Usart1Task(void const * argument);
-
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -100,60 +81,13 @@ int main(void)
   MX_ADC1_Init();
   MX_IWDG_Init();
   MX_USART1_UART_Init();
+  MX_I2C1_Init();
 
   /* USER CODE BEGIN 2 */
-
   /* USER CODE END 2 */
 
-  /* USER CODE BEGIN RTOS_MUTEX */
-  /* add mutexes, ... */
-  /* USER CODE END RTOS_MUTEX */
-
-  /* Create the semaphores(s) */
-  /* definition and creation of myBinarySem01 */
-  osSemaphoreDef(myBinarySem01);
-  myBinarySem01Handle = osSemaphoreCreate(osSemaphore(myBinarySem01), 1);
-
-  /* definition and creation of myBinarySem02 */
-  osSemaphoreDef(myBinarySem02);
-  myBinarySem02Handle = osSemaphoreCreate(osSemaphore(myBinarySem02), 1);
-
-  /* definition and creation of myBinarySem03 */
-  osSemaphoreDef(myBinarySem03);
-  myBinarySem03Handle = osSemaphoreCreate(osSemaphore(myBinarySem03), 1);
-
-  /* USER CODE BEGIN RTOS_SEMAPHORES */
-  /* add semaphores, ... */
-  /* USER CODE END RTOS_SEMAPHORES */
-
-  /* USER CODE BEGIN RTOS_TIMERS */
-  /* start timers, add new ones, ... */
-  /* USER CODE END RTOS_TIMERS */
-
-  /* Create the thread(s) */
-  /* definition and creation of defaultTask */
-
-  /* USER CODE BEGIN RTOS_THREADS */
-  /* add threads, ... */
-
-  osThreadDef(stm32LiveCheck, stm32LiveTask, osPriorityNormal, 0, 64);
-  defaultTaskHandle = osThreadCreate(osThread(stm32LiveCheck), NULL);
-
-  osThreadDef(alarmOut, alarmOutTask, osPriorityNormal, 0, 64);
-  defaultTaskHandle = osThreadCreate(osThread(alarmOut), NULL);
-
-  osThreadDef(stm32Usart1, stm32Usart1Task, osPriorityNormal, 0, 128);
-  defaultTaskHandle = osThreadCreate(osThread(stm32Usart1), NULL);
-  /* USER CODE END RTOS_THREADS */
-
-  /* Create the queue(s) */
-  /* definition and creation of uartRxQueue */
-  osMessageQDef(uartRxQueue, 128, uint32_t);
-  uartRxQueueHandle = osMessageCreate(osMessageQ(uartRxQueue), NULL);
-  /* USER CODE BEGIN RTOS_QUEUES */
-  /* add queues, ... */
-  /* USER CODE END RTOS_QUEUES */
- 
+  /* Call init function for freertos objects (in freertos.c) */
+  MX_FREERTOS_Init();
 
   /* Start scheduler */
   osKernelStart();
@@ -162,6 +96,7 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
   while (1)
   {
   /* USER CODE END WHILE */
@@ -219,157 +154,8 @@ void SystemClock_Config(void)
   HAL_NVIC_SetPriority(SysTick_IRQn, 15, 0);
 }
 
-/* ADC1 init function */
-static void MX_ADC1_Init(void)
-{
-
-  ADC_ChannelConfTypeDef sConfig;
-
-    /**Common config 
-    */
-  hadc1.Instance = ADC1;
-  hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;
-  hadc1.Init.ContinuousConvMode = DISABLE;
-  hadc1.Init.DiscontinuousConvMode = DISABLE;
-  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
-  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion = 1;
-  if (HAL_ADC_Init(&hadc1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-    /**Configure Regular Channel 
-    */
-  sConfig.Channel = ADC_CHANNEL_8;
-  sConfig.Rank = 1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-}
-
-/* IWDG init function */
-static void MX_IWDG_Init(void)
-{
-
-  hiwdg.Instance = IWDG;
-  hiwdg.Init.Prescaler = IWDG_PRESCALER_4;
-  hiwdg.Init.Reload = 4095;
-  if (HAL_IWDG_Init(&hiwdg) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-}
-
-/* USART1 init function */
-static void MX_USART1_UART_Init(void)
-{
-
-  huart1.Instance = USART1;
-  huart1.Init.BaudRate = 115200;
-  huart1.Init.WordLength = UART_WORDLENGTH_8B;
-  huart1.Init.StopBits = UART_STOPBITS_1;
-  huart1.Init.Parity = UART_PARITY_NONE;
-  huart1.Init.Mode = UART_MODE_TX_RX;
-  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-}
-
-/** Configure pins as 
-        * Analog 
-        * Input 
-        * Output
-        * EVENT_OUT
-        * EXTI
-*/
-static void MX_GPIO_Init(void)
-{
-
-  GPIO_InitTypeDef GPIO_InitStruct;
-
-  /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOD_CLK_ENABLE();
-  __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
-
-  /*Configure GPIO pins : PA0 PA1 PA2 PA3 
-                           PA4 PA5 PA6 PA7 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3 
-                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PA11 */
-  GPIO_InitStruct.Pin = GPIO_PIN_11;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : PB3 PB4 PB5 PB6 */
-  GPIO_InitStruct.Pin = GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6, GPIO_PIN_RESET);
-
-}
-
 /* USER CODE BEGIN 4 */
-/* stm32LiveTask function */
-void stm32LiveTask(void const * argument)
-{
-	unsigned int count = 0;
-
-	for(;;)
-	{
-		if(count % 2)	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET);
-		else			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_RESET);
-
-		if(count < 100) 	count++;
-		else				count = 0;
-
-		osDelay(1000);
-	}
-}
-
-/* alarmOutTask function */
-void alarmOutTask(void const * argument)
-{
-	for(;;)
-	{
-		osDelay(1000);
-	}
-}
-
-void stm32Usart1Task(void const * argument)
-{
-	sInBuf = ShellInitRecvBuf();
-	if(uartRxQueueHandle != NULL) HAL_UART_Receive_IT(&huart1,uartRxQueueHandle,USART_RX_BUFF_SIZE);
-
-	for(;;)
-	{
-		stm32ShellCommand();
-		osDelay(10);
-	}
-}
-
 /* USER CODE END 4 */
-
-/* StartDefaultTask function */
 
 /**
   * @brief  This function is executed in case of error occurrence.

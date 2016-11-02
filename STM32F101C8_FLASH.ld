@@ -88,12 +88,13 @@ SECTIONS
     __exidx_end = .;
   } >FLASH
   
-   /* shell command list */
+  /* shell command list */
    .shell_cmd : {
-   	__shell_cmd_start = . ;
-   	KEEP(*(.shell_cmd))
-   	__shell_cmd_end = . ;
-   	} >FLASH
+   __shell_cmd_start = . ;
+   KEEP(*(.shell_cmd))
+   __shell_cmd_end = . ;
+   } >FLASH
+  
 
   .preinit_array     :
   {

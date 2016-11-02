@@ -16,23 +16,15 @@
 #define	MAX_SIZE_MESSAGE	128
 #define	SHELL_TRUE			1
 #define	SHELL_FALSE			-1
+#define USART_RX_BUFF_SIZE	1
+#define BIT8_MASK	0xff
 //#define DEBUG_PARSER
 //#define CONFIG_AUTO_COMPLETE
 
-typedef struct SHELL_INBUF {
-	uint8_t	msgBuf[MAX_SIZE_MESSAGE];
-	uint8_t	idx, odx;
-} SHELL_INBUF_t;
-
-extern SHELL_INBUF_t* sInBuf;
-
 void stm32ShellCommand(void);
-SHELL_INBUF_t* ShellInitRecvBuf(void);
-void ShellSaveRecv(SHELL_INBUF_t* _sInBuf, uint8_t d);
 
 uint8_t uart_isrx(void);
 void usartPutc(uint8_t ch);
-void usartPuts(const char* ch);
 uint8_t usartGetC(void);
 
 int ctrlc(void);

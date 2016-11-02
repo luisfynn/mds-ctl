@@ -38,8 +38,7 @@ SOFTWARE.
 #include <sys/time.h>
 #include <sys/times.h>
 #include "stm32f1xx_hal.h"
-
-extern UART_HandleTypeDef huart1;
+#include "usart.h"
 
 /* Variables */
 #undef errno

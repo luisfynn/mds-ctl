@@ -42,9 +42,8 @@
 #include "cmsis_os.h"
 #include "shell.h"
 #include "command.h"
-#include "common.h"
+#include "usart.h"
 
-extern UART_HandleTypeDef huart1;
 extern osMessageQId uartRxQueueHandle;
 
 #define MAX_DELAY_STOP_STR 32
@@ -63,12 +62,13 @@ static char   tab_seq[] = "        ";		/* used to expand TABs	*/
 #define puts(ch)    printf(ch);
 
 osEvent evt;
-SHELL_INBUF_t* sInBuf = NULL;
+extern uint8_t usartRxBuff;
 
 uint8_t uart_isrx(void)
 {
 	// checks if a character is present in the RX buffer
-	return (sInBuf->idx != sInBuf->odx);
+	evt = osMessageGet(uartRxQueueHandle, 0);
+	return (evt.status == osEventMessage);
 }
 
 void usartPutc(uint8_t ch)
@@ -76,29 +76,19 @@ void usartPutc(uint8_t ch)
 	HAL_UART_Transmit(&huart1, &ch, 1, 10);
 }
 
-void usartPuts(const char* ch)
-{
-	HAL_UART_Transmit(&huart1, (uint8_t*)ch, strlen(ch), 10);
-}
-
 uint8_t usartGetC(void)
 {
 	uint8_t c;
 
-	// wait until a character is present
 	while (uart_isrx()==0)
 	{
 		osDelay(10);
 		continue;
 	}
 
-	// get a character from RX buffer
-	c = sInBuf->msgBuf[sInBuf->odx++];
-	if(sInBuf->odx > MAX_SIZE_MESSAGE - 1 ){
-		sInBuf->odx = 0;
-		sInBuf->idx = 0;
-		memset(sInBuf->msgBuf, 0, MAX_SIZE_MESSAGE);
-	}
+	c = evt.value.v & BIT8_MASK;
+	evt.status = osOK;
+
 	return c;
 }
 
@@ -1049,46 +1039,26 @@ void stm32ShellCommand(void)
 	lastcommand[0] = 0;
 }
 
-SHELL_INBUF_t* ShellInitRecvBuf(void)
-{
-	SHELL_INBUF_t* _sObjBuf;
-	_sObjBuf = (SHELL_INBUF_t*)malloc(sizeof(SHELL_INBUF_t));
-	if(_sObjBuf != NULL)	memset((SHELL_INBUF_t*)_sObjBuf, 0, sizeof(SHELL_INBUF_t));
-
-	return _sObjBuf;
-}
-
-void ShellSaveRecv(SHELL_INBUF_t* _sInBuf, uint8_t d)
-{
-	if (_sInBuf->idx < MAX_SIZE_MESSAGE) {
-		_sInBuf->msgBuf[_sInBuf->idx++] = d;
-	}else{
-	}
-}
-
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
+	uint8_t ret;
+
 	if(huart->Instance == USART1)
 	{
-	  evt = osMessageGet(uartRxQueueHandle, 0);
+	  ret = osMessagePut(uartRxQueueHandle, usartRxBuff, 0);
+	  if(ret == osErrorOS)	printf("Failed osMessage Put\n");
+#if 0
+	  else				  	printf("Success osMessage Put \n");
 
+	  evt = osMessageGet(uartRxQueueHandle, 0);
 	  if(evt.status == osEventMessage)
 	  {
 		  uint8_t recvData = evt.value.v & BIT8_MASK;
-		  ShellSaveRecv(sInBuf, recvData);
+		  printf("evt.value.v %d\n", recvData );
 		  evt.status = osOK;
 	  }
-	  HAL_UART_Receive_IT(&huart1,uartRxQueueHandle, USART_RX_BUFF_SIZE);
+#endif
+	  usartRxBuff = 0;
+	  HAL_UART_Receive_IT(&huart1, &usartRxBuff, USART_RX_BUFF_SIZE);
 	}
 }
-
-
-
-
-
-
-
-
-
-
-

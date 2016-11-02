@@ -78,7 +78,6 @@ task.h is included from an application file. */
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
-#include "common.h"
 
 #if ( configUSE_CO_ROUTINES == 1 )
 	#include "croutine.h"
@@ -1575,16 +1574,13 @@ Queue_t * const pxQueue = ( Queue_t * ) xQueue;
 	portASSERT_IF_INTERRUPT_PRIORITY_INVALID();
 
 	uxSavedInterruptStatus = portSET_INTERRUPT_MASK_FROM_ISR();
-	pxQueue->uxMessagesWaiting = USART_RX_BUFF_SIZE;			//Add luisfynn_161012
 	{
 		/* Cannot block in an ISR, so check there is data available. */
 		if( pxQueue->uxMessagesWaiting > ( UBaseType_t ) 0 )
 		{
 			traceQUEUE_RECEIVE_FROM_ISR( pxQueue );
 
-			memcpy(pvBuffer, pxQueue, 1);					//Add luisfynn_161012
-			//prvCopyDataFromQueue( pxQueue, pvBuffer );	//Delete luisfynn_161012
-
+			prvCopyDataFromQueue( pxQueue, pvBuffer );
 			--( pxQueue->uxMessagesWaiting );
 
 			/* If the queue is locked the event list will not be modified.

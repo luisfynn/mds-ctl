@@ -32,12 +32,12 @@
  *  Command Processor Table
  */
 
-
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
-#include "command.h"
+#include "mxconstants.h"
 #include "shell.h"
+#include "command.h"
 
 #define tstc()      uart_isrx()
 #undef getc

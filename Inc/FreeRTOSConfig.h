@@ -118,7 +118,7 @@ to exclude the API function. */
 #define INCLUDE_vTaskDelete                 1
 #define INCLUDE_vTaskCleanUpResources       0
 #define INCLUDE_vTaskSuspend                1
-#define INCLUDE_vTaskDelayUntil             0
+#define INCLUDE_vTaskDelayUntil             1
 #define INCLUDE_vTaskDelay                  1
 #define INCLUDE_xTaskGetSchedulerState      1
 
@@ -162,7 +162,9 @@ standard names. */
               to prevent overwriting SysTick_Handler defined within STM32Cube HAL */
 /* #define xPortSysTickHandler SysTick_Handler */
 
-/* USER CODE BEGIN Defines */   	      
+/* USER CODE BEGIN Defines */
+#define	configCHECK_FOR_STACK_OVERFLOW 	2
+#define configUSE_MALLOC_FAILED_HOOK	1
 /* Section where parameter definitions can be added (for instance, to override default ones in FreeRTOS.h) */
 /* USER CODE END Defines */ 
 
